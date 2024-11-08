@@ -9,6 +9,10 @@
     "dist"
   ],
   "license": "MIT",
+  "repository": {                           
+    "type": "git",
+    "url": "git+https://github.com/Jin1c-3/koishi-plugin-lru.git"
+  },
   "keywords": [
     "chatbot",
     "koishi",
