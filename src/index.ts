@@ -1,11 +1,11 @@
 import { Context, Schema, sleep } from "koishi";
 import {} from "koishi-plugin-adapter-onebot";
 
-export const name = 'lru'
+export const name = "lru";
 
 export interface Config {}
 
-export const Config: Schema<Config> = Schema.object({})
+export const Config: Schema<Config> = Schema.object({});
 
 export function apply(ctx: Context) {
   ctx = ctx.platform("onebot").guild();
@@ -54,9 +54,13 @@ export function apply(ctx: Context) {
         ].join("\n")
       );
       if (options.dry) return;
-      for (const user of target) {
-        await session.onebot.setGroupKick(session.guildId, user.user_id);
-        await sleep(1500);
+      const delay = ctx.root.config.delay.broadcast;
+      for (let index = 0; index < target.length; index++) {
+        if (index && delay) await sleep(delay);
+        await session.onebot.setGroupKick(
+          session.guildId,
+          target[index].user_id
+        );
       }
       return `已踢出群友 ${target.length} 人`;
     });
