@@ -1,7 +1,7 @@
 {
   "name": "koishi-plugin-lru",
   "description": "踢出最长时间没发言的群友，仅支持OneBot协议，提供不踢有头衔群友的选项",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "main": "lib/index.js",
   "typings": "lib/index.d.ts",
   "files": [

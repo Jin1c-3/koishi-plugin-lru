@@ -3,11 +3,21 @@ import {} from "koishi-plugin-adapter-onebot";
 
 export const name = "lru";
 
-export interface Config {}
+export interface Config {
+  relex_time: number;
+}
 
-export const Config: Schema<Config> = Schema.object({});
+export const Config: Schema<Config> = Schema.object({
+  relex_time: Schema.number()
+    .role("slider")
+    .min(0)
+    .max(10)
+    .step(0.5)
+    .default(2.5)
+    .description("踢每个人的间隔时间，踢太快可能被封。单位：秒"),
+});
 
-export function apply(ctx: Context) {
+export function apply(ctx: Context, { relex_time }: Config) {
   ctx = ctx.platform("onebot").guild();
 
   ctx
@@ -55,7 +65,7 @@ export function apply(ctx: Context) {
       );
       if (options.dry) return;
       for (let index = 0; index < target.length; index++) {
-        if (index) await sleep(1500);
+        if (index) await sleep(relex_time * 1000);
         await session.onebot.setGroupKick(
           session.guildId,
           target[index].user_id
