@@ -54,9 +54,8 @@ export function apply(ctx: Context) {
         ].join("\n")
       );
       if (options.dry) return;
-      const delay = ctx.root.config.delay.broadcast;
       for (let index = 0; index < target.length; index++) {
-        if (index && delay) await sleep(delay);
+        if (index) await sleep(1500);
         await session.onebot.setGroupKick(
           session.guildId,
           target[index].user_id
