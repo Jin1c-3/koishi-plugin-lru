@@ -1,7 +1,18 @@
 import { Context, Schema, sleep } from "koishi";
 import {} from "koishi-plugin-adapter-onebot";
+import {} from "@koishijs/cache";
 
 export const name = "lru";
+
+export const inject = {
+  optional: ["cache"],
+};
+
+declare module "@koishijs/cache" {
+  interface Tables {
+    lru: boolean;
+  }
+}
 
 export interface Config {
   relex_time: number;
@@ -18,15 +29,21 @@ export const Config: Schema<Config> = Schema.object({
 });
 
 export function apply(ctx: Context, { relex_time }: Config) {
+  const logger = ctx.logger("lru");
   ctx.i18n.define("zh-CN", require("./locales/zh-CN"));
-  ctx = ctx.platform("onebot").guild();
+  ctx = ctx.platform("onebot");
   ctx
     .command("lru <threshold:number>", {
       authority: 3,
     })
-    .option("dry", "只检测不踢人")
-    .option("no-title", "不踢有头衔的群友")
+    .option("dry", "-d 只检测不踢人")
+    .option("no-title", "-n 不踢有头衔的群友")
     .action(async ({ session, options }, threshold) => {
+      if (ctx.cache) {
+        if (await ctx.cache.get("lru", session.guildId))
+          return session.text(".cool-down");
+        await ctx.cache.set("lru", session.guildId, true);
+      }
       if (!threshold || threshold <= 0) return session.text(".no-threshold");
 
       let users = await session.onebot.getGroupMemberList(
@@ -59,7 +76,12 @@ export function apply(ctx: Context, { relex_time }: Config) {
       ];
 
       if (options["no-title"]) {
-        const title_num = userDict[last_user.user_id] - target.length;
+        let title_num: number;
+        if (userDict[last_user.user_id] === 0) {
+          title_num = 0;
+        } else {
+          title_num = userDict[last_user.user_id] - target.length;
+        }
         output.splice(1, 0, session.text(".alert-no-title", [title_num]));
       }
       await session.send(output.join("\n"));
@@ -70,6 +92,9 @@ export function apply(ctx: Context, { relex_time }: Config) {
           session.guildId,
           target[index].user_id
         );
+      }
+      if (ctx.cache) {
+        await ctx.cache.delete("lru", session.guildId);
       }
       return session.text(".alert-final", [target.length]);
     });
