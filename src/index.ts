@@ -70,7 +70,7 @@ export function apply(ctx: Context, { relex_time }: Config) {
       users = users.sort((a, b) => a.last_sent_time - b.last_sent_time);
       const userDict: Record<number, number> = {};
       users.forEach((user, index) => {
-        userDict[user.user_id] = index;
+        userDict[user.user_id] = index + 1;
       });
 
       let origin_flag = true;
@@ -105,12 +105,7 @@ export function apply(ctx: Context, { relex_time }: Config) {
       ];
 
       if (options["no-title"] || options.level) {
-        let title_num: number;
-        if (userDict[last_user.user_id] === 0) {
-          title_num = 0;
-        } else {
-          title_num = userDict[last_user.user_id] - target.length;
-        }
+        let title_num = userDict[last_user.user_id] - target.length;
         output.splice(1, 0, session.text(".escape", [title_num]));
       }
       await session.send(output.join("\n"));
