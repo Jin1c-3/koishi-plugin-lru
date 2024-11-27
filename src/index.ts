@@ -1,6 +1,7 @@
 import { Context, Schema, sleep } from "koishi";
 import {} from "koishi-plugin-adapter-onebot";
 import {} from "@koishijs/cache";
+import { GroupMemberInfo } from "koishi-plugin-adapter-onebot/lib/types";
 
 export const name = "lru";
 
@@ -36,15 +37,21 @@ export function apply(ctx: Context, { relex_time }: Config) {
     .command("lru <threshold:number>", {
       authority: 3,
     })
-    .option("dry", "-d 只检测不踢人")
-    .option("no-title", "-n 不踢有头衔的群友")
+    .option("dry", "-d")
+    .option("no-title", "-n")
+    .option("level", "-l <level:natural>")
     .action(async ({ session, options }, threshold) => {
       if (ctx.cache) {
         if (await ctx.cache.get("lru", session.guildId))
           return session.text(".cool-down");
-        await ctx.cache.set("lru", session.guildId, true);
+        await ctx.cache.set("lru", session.guildId, true, 1000 * 60 * 60 * 8);
       }
-      if (!threshold || threshold <= 0) return session.text(".no-threshold");
+      if (!threshold || threshold <= 0) {
+        if (ctx.cache) {
+          await ctx.cache.delete("lru", session.guildId);
+        }
+        return session.text(".no-threshold");
+      }
 
       let users = await session.onebot.getGroupMemberList(
         session.guildId,
@@ -54,18 +61,40 @@ export function apply(ctx: Context, { relex_time }: Config) {
       users = users.filter(
         (user) => user.role === "member" && !ctx.bots[user.user_id]
       );
-      if (threshold > users.length) return session.text(".bad-threshold");
+      if (threshold > users.length) {
+        if (ctx.cache) {
+          await ctx.cache.delete("lru", session.guildId);
+        }
+        return session.text(".bad-threshold");
+      }
       users = users.sort((a, b) => a.last_sent_time - b.last_sent_time);
       const userDict: Record<number, number> = {};
       users.forEach((user, index) => {
         userDict[user.user_id] = index;
       });
 
-      let target = options["no-title"]
-        ? users.filter((user) => !user.title).slice(0, threshold)
-        : users.slice(0, threshold);
+      let origin_flag = true;
+      let target: GroupMemberInfo[];
+      if (options["no-title"]) {
+        origin_flag = false;
+        target = users.filter((user) => !user.title).slice(0, threshold);
+      }
+      if (options.level) {
+        origin_flag = false;
+        target = users
+          .filter((user) => Number(user.level) < options.level)
+          .slice(0, threshold);
+      }
+      if (origin_flag) {
+        target = users.slice(0, threshold);
+      }
 
-      if (target.length === 0) return session.text(".bad-threshold");
+      if (target.length === 0) {
+        if (ctx.cache) {
+          await ctx.cache.delete("lru", session.guildId);
+        }
+        return session.text(".bad-threshold");
+      }
 
       const last_user = target[target.length - 1];
       const output = [
@@ -75,17 +104,22 @@ export function apply(ctx: Context, { relex_time }: Config) {
         ]),
       ];
 
-      if (options["no-title"]) {
+      if (options["no-title"] || options.level) {
         let title_num: number;
         if (userDict[last_user.user_id] === 0) {
           title_num = 0;
         } else {
           title_num = userDict[last_user.user_id] - target.length;
         }
-        output.splice(1, 0, session.text(".alert-no-title", [title_num]));
+        output.splice(1, 0, session.text(".escape", [title_num]));
       }
       await session.send(output.join("\n"));
-      if (options.dry) return;
+      if (options.dry) {
+        if (ctx.cache) {
+          await ctx.cache.delete("lru", session.guildId);
+        }
+        return;
+      }
       for (let index = 0; index < target.length; index++) {
         if (index) await sleep(relex_time * 1000);
         await session.onebot.setGroupKick(

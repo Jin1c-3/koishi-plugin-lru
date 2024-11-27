@@ -1,17 +1,20 @@
 commands:
   lru:
-    description: 踢出太久没有发言的群友，必要函参要踢的人数
+    description: 踢出太久没有发言的群友，命令后加上要踢的人数即可
     options:
       dry: 只检测不踢人
       no-title: 不踢有头衔的群友
+      level: 指定群等级，不踢更高等级的群友（包含这个等级）
     examples: |-
       lru 5
       lru 10 --no-title
       lru 15 --dry --no-title
+      lru 15 -n --level 80
     usage: |-
       命令后面接要踢的人数即可
       如果不想踢有头衔的群友，可以加上 --no-title 参数
       如果只想检测不踢人，可以加上 --dry 参数
+      如果只想踢某个等级以下的群友，可以加上 --level 并跟上等级
     messages:
       no-threshold: 请输入要踢的人数。
       bad-threshold: 无法执行，可能是参数太大了。
@@ -19,6 +22,6 @@ commands:
         即将清理 {0} 人
         最后一次发言的时间为：
         {1}
-      alert-no-title: 有 {0} 个头衔✌️逃脱处理
+      escape: 有 {0} 位✌️逃脱处理
       alert-final: 本次清理了 {0} 人
       cool-down: 调用过于频繁，请稍后再试
